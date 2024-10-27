@@ -1,111 +1,168 @@
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-const CELL_SIZE = 10;
-let width, height;
-let grid;
+// Constants
+const GAME_CONFIG = {
+    CELL_SIZE: 10,
+    COLORS: {
+        LOW_NEIGHBORS: '#9be9a8',    // 0-2 neighbors
+        MEDIUM_NEIGHBORS: '#40c463',  // 3-4 neighbors
+        HIGH_NEIGHBORS: '#30a14e',    // 5-6 neighbors
+        MAX_NEIGHBORS: '#216e39'      // 7-8 neighbors
+    }
+};
 
-function resize() {
-    width = Math.floor(window.innerWidth / CELL_SIZE);
-    height = Math.floor(window.innerHeight / CELL_SIZE);
-    canvas.width = width * CELL_SIZE;
-    canvas.height = height * CELL_SIZE;
-    if (!grid) initGrid();
+// Game state
+class GameState {
+    constructor() {
+        this.canvas = null;
+        this.ctx = null;
+        this.width = 0;
+        this.height = 0;
+        this.grid = null;
+        this.isPageVisible = true;
+        this.animationFrameId = null;
+    }
 }
 
-function initGrid() {
-    grid = new Array(width).fill().map(() => 
-        new Array(height).fill().map(() => Math.random() > 0.7)
-    );
+// Initialize game state
+const gameState = new GameState();
+
+// Canvas management
+class CanvasManager {
+    static init() {
+        if (typeof document !== 'undefined') {
+            gameState.canvas = document.getElementById('game');
+            gameState.ctx = gameState.canvas?.getContext('2d');
+        }
+    }
+
+    static resize() {
+        gameState.width = Math.floor(window.innerWidth / GAME_CONFIG.CELL_SIZE);
+        gameState.height = Math.floor(window.innerHeight / GAME_CONFIG.CELL_SIZE);
+        
+        if (gameState.canvas) {
+            gameState.canvas.width = gameState.width * GAME_CONFIG.CELL_SIZE;
+            gameState.canvas.height = gameState.height * GAME_CONFIG.CELL_SIZE;
+        }
+        
+        if (!gameState.grid) GridManager.init();
+    }
 }
 
-function update() {
-    const next = grid.map(arr => [...arr]);
-    
-    for (let x = 0; x < width; x++) {
-        for (let y = 0; y < height; y++) {
-            const neighbors = countNeighbors(x, y);
-            if (grid[x][y]) {
-                next[x][y] = neighbors === 2 || neighbors === 3;
-            } else {
-                next[x][y] = neighbors === 3;
+// Grid management
+class GridManager {
+    static init() {
+        gameState.grid = new Array(gameState.width).fill().map(() => 
+            new Array(gameState.height).fill().map(() => Math.random() > 0.7)
+        );
+    }
+
+    /**
+     * Counts the number of live neighbors for a cell at given coordinates.
+     * Uses toroidal array (wrapping around edges) for boundary calculations.
+     * @param {number} x - The x-coordinate of the cell
+     * @param {number} y - The y-coordinate of the cell
+     * @returns {number} The count of live neighboring cells (0-8)
+     */
+    static countNeighbors(x, y) {
+        let count = 0;
+        for (let i = -1; i <= 1; i++) {
+            for (let j = -1; j <= 1; j++) {
+                if (i === 0 && j === 0) continue;
+                const nx = (x + i + gameState.width) % gameState.width;
+                const ny = (y + j + gameState.height) % gameState.height;
+                if (gameState.grid[nx][ny]) count++;
             }
         }
+        return count;
     }
-    
-    grid = next;
-}
 
-function countNeighbors(x, y) {
-    let count = 0;
-    for (let i = -1; i <= 1; i++) {
-        for (let j = -1; j <= 1; j++) {
-            if (i === 0 && j === 0) continue;
-            const nx = (x + i + width) % width;
-            const ny = (y + j + height) % height;
-            if (grid[nx][ny]) count++;
+    static update() {
+        const next = gameState.grid.map(arr => [...arr]);
+        
+        for (let x = 0; x < gameState.width; x++) {
+            for (let y = 0; y < gameState.height; y++) {
+                const neighbors = this.countNeighbors(x, y);
+                next[x][y] = gameState.grid[x][y] 
+                    ? (neighbors === 2 || neighbors === 3)
+                    : (neighbors === 3);
+            }
         }
+        
+        gameState.grid = next;
     }
-    return count;
 }
 
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    for (let x = 0; x < width; x++) {
-        for (let y = 0; y < height; y++) {
-            if (grid[x][y]) {
-                const neighbors = countNeighbors(x, y);
-                // Map neighbor count to colors
-                let color;
-                if (neighbors <= 2) {
-                    color = '#9be9a8'; // Lightest
-                } else if (neighbors <= 4) {
-                    color = '#40c463'; // Light
-                } else if (neighbors <= 6) {
-                    color = '#30a14e'; // Medium
-                } else {
-                    color = '#216e39'; // Darkest
+// Renderer
+class Renderer {
+    static getColorForNeighbors(neighbors) {
+        if (neighbors <= 2) return GAME_CONFIG.COLORS.LOW_NEIGHBORS;
+        if (neighbors <= 4) return GAME_CONFIG.COLORS.MEDIUM_NEIGHBORS;
+        if (neighbors <= 6) return GAME_CONFIG.COLORS.HIGH_NEIGHBORS;
+        return GAME_CONFIG.COLORS.MAX_NEIGHBORS;
+    }
+
+    static draw() {
+        if (!gameState.ctx) return;
+        
+        gameState.ctx.clearRect(0, 0, gameState.canvas.width, gameState.canvas.height);
+        
+        for (let x = 0; x < gameState.width; x++) {
+            for (let y = 0; y < gameState.height; y++) {
+                if (gameState.grid[x][y]) {
+                    const neighbors = GridManager.countNeighbors(x, y);
+                    gameState.ctx.fillStyle = this.getColorForNeighbors(neighbors);
+                    gameState.ctx.beginPath();
+                    gameState.ctx.roundRect(
+                        x * GAME_CONFIG.CELL_SIZE,
+                        y * GAME_CONFIG.CELL_SIZE,
+                        GAME_CONFIG.CELL_SIZE - 1,
+                        GAME_CONFIG.CELL_SIZE - 1,
+                        2
+                    );
+                    gameState.ctx.fill();
                 }
-                
-                ctx.fillStyle = color;
-                ctx.beginPath();
-                ctx.roundRect(
-                    x * CELL_SIZE,
-                    y * CELL_SIZE,
-                    CELL_SIZE - 1,
-                    CELL_SIZE - 1,
-                    2
-                );
-                ctx.fill();
             }
         }
     }
 }
 
-let isPageVisible = true;
-let animationFrameId = null;
+// Game loop and event handlers
+class GameLoop {
+    static animate() {
+        if (!gameState.isPageVisible) return;
+        
+        GridManager.update();
+        Renderer.draw();
+        gameState.animationFrameId = requestAnimationFrame(() => this.animate());
+    }
 
-function animate() {
-    if (!isPageVisible) return;
-    
-    update();
-    draw();
-    animationFrameId = requestAnimationFrame(animate);
-}
-
-function handleVisibilityChange() {
-    isPageVisible = document.hidden === false;
-    document.title = isPageVisible ? "Conway's Game of Life" : "NOT ACTIVE";
-    
-    if (isPageVisible) {
-        animationFrameId = requestAnimationFrame(animate);
-    } else if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-        animationFrameId = null;
+    static handleVisibilityChange() {
+        gameState.isPageVisible = !document.hidden;
+        document.title = gameState.isPageVisible ? "Conway's Game of Life" : "NOT ACTIVE";
+        
+        if (gameState.isPageVisible) {
+            gameState.animationFrameId = requestAnimationFrame(() => this.animate());
+        } else if (gameState.animationFrameId) {
+            cancelAnimationFrame(gameState.animationFrameId);
+            gameState.animationFrameId = null;
+        }
     }
 }
 
-window.addEventListener('resize', resize);
-document.addEventListener('visibilitychange', handleVisibilityChange);
-resize();
-animate(); // Start the animation loop
+// Initialize game
+window.addEventListener('resize', () => CanvasManager.resize());
+document.addEventListener('visibilitychange', () => GameLoop.handleVisibilityChange());
+CanvasManager.init();
+CanvasManager.resize();
+GameLoop.animate();
+
+// Export for testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        GameState,
+        CanvasManager,
+        GridManager,
+        Renderer,
+        GameLoop,
+        gameState
+    };
+}
