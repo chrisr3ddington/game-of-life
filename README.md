@@ -107,3 +107,23 @@ As patterns shift from less to more.
 Thus Conway's game, in pure simplicity,
 Shows how complexity breeds endlessly.
 ```
+
+## The Algorithm (In Sonnet Form)
+
+In grids of cells both stark and binary,
+Each space decides 'tween life and death's dark call.
+Two neighbors keep what living cells carry,
+While three preserve or birth life overall.
+
+The GridManager counts eight spaces near,
+Each cell alive adds weight to sum divine.
+When four or more crowd close, death draws so near,
+While loneliness lets single cells decline.
+
+In toroidal dance edges wrap complete,
+As east meets west and north joins southern bound.
+Through generations patterns repeat,
+As gliders glide and blinkers blink around.
+
+Through simple rules complexity emerges,
+As life and death in endless dance converges.
