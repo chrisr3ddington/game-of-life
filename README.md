@@ -85,3 +85,25 @@ The project uses a simple structure:
 This project is open source and available under the MIT License.
 Appending text
 
+
+## The Algorithm:
+
+```
+In cells both square and stark, a world unfolds,
+Where binary fates dance through time and space.
+Each neighbor counted, as the rule holds,
+Two or three companions set life's pace.
+
+With fewer friends, the lonely cell must fade,
+While crowds of four or more bring certain death.
+But three dear neighbors see new life be made,
+As empty spaces draw their first sweet breath.
+
+Through toroidal bounds the grid extends,
+Where edges wrap like ancient snake of lore.
+Each generation's story gently bends,
+As patterns shift from less to more.
+
+Thus Conway's game, in pure simplicity,
+Shows how complexity breeds endlessly.
+```
